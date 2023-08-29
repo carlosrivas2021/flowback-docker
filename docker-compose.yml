@@ -1,0 +1,52 @@
+version: '3'
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: flowback
+      POSTGRES_PASSWORD: flowback_secret
+      POSTGRES_DB: flowback
+
+  rabbitmq:
+    image: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  redis:
+    image: redis
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    command: python manage.py runserver 0.0.0.0:8000
+    restart: always
+    ports:
+        - "8000:8000"
+    depends_on:
+        - postgres
+        - migration
+        - rabbitmq
+        - redis
+
+  migration:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    command: python manage.py migrate --noinput
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+        - "8080:1000"
